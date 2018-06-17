@@ -1,5 +1,6 @@
 import json
 from _socket import error
+from pprint import pprint
 from sys import exc_info
 from requests import get, exceptions
 from listener import AUTH
@@ -37,7 +38,7 @@ class TwitterStream:
             print(self.query_url, self.response)
             return self.response
         except exceptions.HTTPError as e:
-            print(e)
+            print("Response error:", e)
             exit(1)
 
     def send_tweets_to_spark(self, tcp_connection):
@@ -52,10 +53,13 @@ class TwitterStream:
             try:
                 full_tweet = json.loads(line.decode('utf-8'))
                 tweet_text = full_tweet['text']
-                print("Tweet Text: " + tweet_text, '\n', '-' * 20)
                 num_tweets += 1
                 print("successful tweets:", num_tweets)
+                print("Tweet Text: " + tweet_text, '\n', '-' * 20)
                 tcp_connection[0].send(tweet_text.encode('utf-8'))
+            except KeyError:
+                print("Reached twitter streaming limit!")
+                exit(1)
             except error:
                 e = exc_info()
                 print("Error sending:", e)

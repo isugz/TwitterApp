@@ -48,6 +48,10 @@ class Listener:
             e = exc_info()
             print("Address-related error connecting to server: ", e)
             exit(1)
+        except OSError:
+            e = exc_info()
+            print("Address in use:", e)
+            exit(1)
         except error:
             e = exc_info()
             print("Connection error: ", e)

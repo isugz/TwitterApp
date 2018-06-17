@@ -15,12 +15,10 @@ if __name__ == "__main__":
     # start tcp connection
     listener.start_tcp_connection()
     # make TwitterStream
-    # tcp_connection = listener.connection
     twitter_stream = TwitterStream()
     # construct query_url
     twitter_stream.construct_query_url(URL, QUERY_DATA)
     # get tweets
-    # TODO: handle if response is not 200 in the TwitterStream class
     twitter_response = twitter_stream.get_tweets()
     # send tweets to spark (uses the tcp connection from listener)
     twitter_stream.send_tweets_to_spark(listener.connection)
