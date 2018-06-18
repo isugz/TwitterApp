@@ -1,13 +1,9 @@
 # RUN FILE FOR STREAMING
 # code adapted from tutorial by Hanee Medhat
 # https://www.toptal.com/apache/apache-spark-streaming-twitter
-from listener import Listener
+from listener import Listener, TCP_IP, TCP_PORT, URL, QUERY_DATA
 from twitter_stream import TwitterStream
 
-# variables: tcp_ip, tcp_port, url, query_data
-TCP_IP, TCP_PORT = "localhost", 9009
-URL, QUERY_DATA = 'https://stream.twitter.com/1.1/statuses/filter.json', \
-                  [('language', 'en'), ('locations', '-130,-20,100,50'), ('track', '#')]
 
 if __name__ == "__main__":
     # make a Listener

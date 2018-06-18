@@ -1,10 +1,8 @@
 import json
 from _socket import error
-from pprint import pprint
 from sys import exc_info
 from requests import get, exceptions
 from listener import AUTH
-from socket import socket
 
 """
 Twitter Stream Class

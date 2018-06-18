@@ -2,23 +2,42 @@ from requests import post
 from pyspark import SparkContext
 from pyspark.sql import Row, SparkSession
 from pyspark.streaming import StreamingContext
+from listener import CHECKPOINT, TCP_IP, TCP_PORT
 
-TCP_IP, TCP_PORT, CHECKPOINT = "localhost", 9009, "checkpoint_TwitterApp"
+# url used for dashboard visualization
+dashboard_url = 'http://localhost:5001/updateData'
 
 
 def aggregate_tags_count(new_values, total_sum):
+    """
+    Function to aggregate hashtag counts.
+    :param new_values: The new values to be added to the running total.
+    :param total_sum: A running total of values.
+    :return: The sum of the new values and previous values.
+    """
     if total_sum is None:
         total_sum = 0
     return sum(new_values) + total_sum
 
 
 def get_sql_context_instance(spark_configuration):
-    if ('sparkSessionSingletonInstance' not in globals()):
+    """
+    Lazily instantiated global instance of SparkSession.
+    :param spark_configuration: Configuration of a SparkSession.
+    :return: Instantiated instance of SparkSession.
+    """
+    if 'sparkSessionSingletonInstance' not in globals():
         globals()['sparkSessionSingletonInstance'] = SparkSession.builder.config(conf=spark_configuration).getOrCreate()
     return globals()['sparkSessionSingletonInstance']
 
 
 def create_context(host, port):
+    """
+    Function to create and set up a new streaming context.
+    :param host: A string describing the IP to use for HTTP Client. Example: 'localhost'
+    :param port: An integer value that corresponds to the port number used to read data from.
+    :return: The created and configured streaming context.
+    """
     spark_context = SparkContext(master="local[2]", appName="TwitterStreamApp")
     spark_context.setLogLevel("ERROR")
     # create the Streaming Context from the above spark context with interval size 2 seconds
@@ -35,6 +54,11 @@ def create_context(host, port):
     tags_totals = hashtags.updateStateByKey(aggregate_tags_count)
 
     def process_rdd(time, rdd):
+        """
+        Function that processes an RDD.
+        :param time: Time stamp of the process.
+        :param rdd: The RDD to be processed.
+        """
         print("----------- %s -----------" % str(time))
         try:
             if rdd:
@@ -43,27 +67,29 @@ def create_context(host, port):
                 # convert the RDD to Row RDD
                 row_rdd = rdd.map(lambda w: Row(hashtag=w[0], hashtag_count=w[1]))
                 # create a DF from the Row RDD
-                hashtags_df = sql_context.createDataFrame(row_rdd)
+                hashtags_dataframe = sql_context.createDataFrame(row_rdd)
                 # Register the dataframe as table
-                # hashtags_df.registerTempTable("hashtags")
-                hashtags_df.createOrReplaceTempView("hashtags")
+                hashtags_dataframe.createOrReplaceTempView("hashtags")
                 # get the top 10 hashtags from the table using SQL and print them
-                hashtag_counts_df = sql_context.sql(
+                hashtag_counts_dataframe = sql_context.sql(
                     "select hashtag, hashtag_count from hashtags order by hashtag_count desc limit 10")
-                hashtag_counts_df.show()
+                hashtag_counts_dataframe.show()
                 # call this method to prepare top 10 hashtags DF and send them
 
-                def send_df_to_dashboard(df):
+                def send_dataframe_to_dashboard(dataframe):
+                    """
+                    Function to send DataFrame to the dashboard for visualization.
+                    :param dataframe: Spark DataFrame created by process_rdd().
+                    """
                     # extract the hashtags from dataframe and convert them into array
-                    top_tags = [str(t.hashtag) for t in df.select("hashtag").collect()]
+                    top_tags = [str(t.hashtag) for t in dataframe.select("hashtag").collect()]
                     # extract the counts from dataframe and convert them into array
-                    tags_count = [p.hashtag_count for p in df.select("hashtag_count").collect()]
+                    tags_count = [p.hashtag_count for p in dataframe.select("hashtag_count").collect()]
                     # initialize and send the data through REST API
-                    url = 'http://localhost:5001/updateData'
                     request_data = {'label': str(top_tags), 'data': str(tags_count)}
-                    response = post(url, data=request_data)
+                    response = post(dashboard_url, data=request_data)
 
-                send_df_to_dashboard(hashtag_counts_df)
+                send_dataframe_to_dashboard(hashtag_counts_dataframe)
         except:
             pass
 
