@@ -1,4 +1,4 @@
-from flask import Flask,jsonify,request
+from flask import Flask, jsonify, request
 from flask import render_template
 import ast
 
@@ -10,7 +10,7 @@ values = []
 
 @app.route("/")
 def get_chart_page():
-    global labels,values
+    global labels, values
     labels = []
     values = []
     return render_template('chart.html', values=values, labels=labels)

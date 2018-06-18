@@ -56,7 +56,7 @@ class TwitterStream:
                 print("Tweet Text: " + tweet_text, '\n', '-' * 20)
                 tcp_connection[0].send(tweet_text.encode('utf-8'))
             except KeyError:
-                print("Reached twitter streaming limit!")
+                print(tweet_text)
                 exit(1)
             except error:
                 e = exc_info()

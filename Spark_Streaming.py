@@ -1,5 +1,5 @@
 from requests import post
-from pyspark import SparkContext
+from pyspark import SparkContext, StorageLevel
 from pyspark.sql import Row, SparkSession
 from pyspark.streaming import StreamingContext
 from listener import CHECKPOINT, TCP_IP, TCP_PORT
@@ -45,9 +45,10 @@ def create_context(host, port):
     # setting a checkpoint to allow RDD recovery
     streaming_context.checkpoint(CHECKPOINT)
     # read data from port 9009
-    dataStream = streaming_context.socketTextStream(TCP_IP, TCP_PORT)
+    data_stream = streaming_context.socketTextStream(TCP_IP, TCP_PORT,
+                                                     storageLevel=StorageLevel(True, True, False, False, 2))
     # split each tweet into words
-    words = dataStream.flatMap(lambda line: line.split(" "))
+    words = data_stream.flatMap(lambda line: line.split(" "))
     # filter the words to get only hashtags, then map each hashtag to be a pair of (hashtag,1)
     hashtags = words.filter(lambda w: '#' in w).map(lambda x: (x, 1))
     # adding the count of each hashtag to its last count
@@ -74,6 +75,7 @@ def create_context(host, port):
                 hashtag_counts_dataframe = sql_context.sql(
                     "select hashtag, hashtag_count from hashtags order by hashtag_count desc limit 10")
                 hashtag_counts_dataframe.show()
+
                 # call this method to prepare top 10 hashtags DF and send them
 
                 def send_dataframe_to_dashboard(dataframe):
@@ -105,53 +107,3 @@ if __name__ == "__main__":
     streaming_context.start()
     # wait for the streaming to finish
     streaming_context.awaitTermination()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
