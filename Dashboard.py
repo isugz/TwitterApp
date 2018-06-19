@@ -2,7 +2,6 @@ from flask import Flask, jsonify, request
 from flask import render_template
 import ast
 
-
 app = Flask(__name__)
 labels = []
 values = []
