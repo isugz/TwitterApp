@@ -1,5 +1,6 @@
 import json
 from _socket import error
+from pprint import pprint
 from sys import exc_info
 from requests import get, exceptions
 from listener import AUTH
@@ -50,14 +51,12 @@ class TwitterStream:
                 continue
             try:
                 full_tweet = json.loads(line.decode('utf-8'))
-                tweet_text = full_tweet['text']
-                num_tweets += 1
-                print("successful tweets:", num_tweets)
-                print("Tweet Text: " + tweet_text, '\n', '-' * 20)
-                tcp_connection[0].send(tweet_text.encode('utf-8'))
-            except KeyError:
-                print(tweet_text)
-                exit(1)
+                if 'text' in full_tweet:
+                    tweet_text = full_tweet['text']
+                    num_tweets += 1
+                    print("successful tweets:", num_tweets)
+                    print("Tweet Text: " + tweet_text, '\n', '-' * 20)
+                    tcp_connection[0].send(tweet_text.encode('utf-8'))
             except error:
                 e = exc_info()
                 print("Error sending:", e)
