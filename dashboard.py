@@ -12,10 +12,11 @@ def get_chart_page():
     global labels, values
     labels = []
     values = []
+    print('labels:', labels, '\nvalues:', values)
     return render_template('chart.html', values=values, labels=labels)
 
 
-@app.route('/refreshData')
+@app.route('/refreshData', methods=['GET'])
 def refresh_graph_data():
     global labels, values
     print("labels now: " + str(labels))
