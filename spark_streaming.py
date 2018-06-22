@@ -1,8 +1,11 @@
+"""
+Spark program for streaming and processing tweets.
+"""
 from requests import post
 from pyspark import SparkContext, StorageLevel
 from pyspark.sql import Row, SparkSession
 from pyspark.streaming import StreamingContext
-from listener import CHECKPOINT, TCP_IP, TCP_PORT
+from config import CHECKPOINT, ADDRESS, PORT
 
 # url used for dashboard visualization
 dashboard_url = 'http://localhost:5001/updateData'
@@ -45,7 +48,7 @@ def create_context(host, port):
     # setting a checkpoint to allow RDD recovery
     streaming_context.checkpoint(CHECKPOINT)
     # read data from port 9009
-    data_stream = streaming_context.socketTextStream(TCP_IP, TCP_PORT,
+    data_stream = streaming_context.socketTextStream(ADDRESS, PORT,
                                                      storageLevel=StorageLevel(True, True, False, False, 2))
     # split each tweet into words
     words = data_stream.flatMap(lambda line: line.split(" "))
@@ -102,7 +105,7 @@ def create_context(host, port):
 
 if __name__ == "__main__":
     # create streaming context
-    streaming_context = StreamingContext.getOrCreate(CHECKPOINT, lambda: create_context(TCP_IP, TCP_PORT))
+    streaming_context = StreamingContext.getOrCreate(CHECKPOINT, lambda: create_context(ADDRESS, PORT))
     # start the streaming computation
     streaming_context.start()
     # wait for the streaming to finish

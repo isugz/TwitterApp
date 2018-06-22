@@ -1,49 +1,60 @@
+"""
+Listener class
+"""
 from socket import socket, AF_INET, SOCK_STREAM, gaierror, error
 from sys import exc_info
-from requests_oauthlib import OAuth1
-from http_config import *
-
-# Twitter API configurations
-ACCESS_TOKEN = twitter_access_token
-ACCESS_SECRET = twitter_access_secret
-CONSUMER_KEY = twitter_consumer_key
-CONSUMER_SECRET = twitter_consumer_secret
-
-# Twitter API Authorization
-AUTH = OAuth1(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
-
-"""
-Twitter Stream Listener class
-"""
+from config import PARAMS, URL
+from twitter_stream import TwitterStream
 
 
 class Listener:
-    def __init__(self, tcp_ip, tcp_port):
+    def __init__(self, address, port):
         """
         Initializes a Listener with specified IP and port number for HTTP Client; creates socket.
-        :param tcp_ip: A string describing the IP to use for HTTP Client. Example: 'localhost'
-        :param tcp_port: An integer value that corresponds to the port number used for TCP connection.
+        :param address: A string describing the IP to use for HTTP Client. Example: 'localhost'
+        :param port: An integer value that corresponds to the port number used for TCP connection.
         """
-        self.tcp_ip = tcp_ip
-        self.tcp_port = tcp_port
-        self.connection = None
+        self.address = address
+        self.port = port
+        self.client_sock = None
+        self.sock = None
+                
+    def echo_handler(self):
+        """
+        Function to handle connection between Twitter API and Spark.
+        """
+        try:
+            # make TwitterStream
+            twitter_stream = TwitterStream()
+            # construct query_url
+            twitter_stream.construct_query_url(URL, PARAMS)
+            # get tweets
+            twitter_response = twitter_stream.get_tweets()
+            # send tweets to spark (uses the tcp connection from listener)
+            twitter_stream.send_tweets_to_spark(self.client_sock)
+        except error:
+            e = exc_info()
+            print("Handler Error:", e)
+
+    def echo_server(self, backlog=1):
+        """
+        Function to create socket; calls handler function to make the connection.
+        :param backlog: Integer value representing the specified number of unaccepted connections
+                        allowed before refusing new connections.
+        """
         try:
             self.sock = socket(AF_INET, SOCK_STREAM)
         except error:
             e = exc_info()
             print("Error creating the socket:", e)
             exit(1)
-
-    def start_tcp_connection(self):
-        """
-        This function establishes the TCP connection after the Listener has been initialized.
-        """
         try:
-            self.sock.bind((self.tcp_ip, self.tcp_port))  # binding to (host, port)
-            self.sock.listen(1)
+            self.sock.bind((self.address, self.port))
+            self.sock.listen(backlog)
             print("Waiting for TCP connection...")
-            self.connection = self.sock.accept()
-            print("Connected... Starting getting tweets.")
+            while True:
+                self.client_sock, client_addr = self.sock.accept()
+                self.echo_handler()
         except gaierror:
             e = exc_info()
             print("Address-related error connecting to server: ", e)

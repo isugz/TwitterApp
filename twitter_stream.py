@@ -1,13 +1,11 @@
-import json
-from _socket import error
-from pprint import pprint
-from sys import exc_info
-from requests import get, exceptions
-from listener import AUTH
-
 """
 Twitter Stream Class
 """
+import json
+from _socket import error
+from sys import exc_info
+from requests import get, exceptions
+from config import AUTH
 
 
 class TwitterStream:
@@ -18,14 +16,15 @@ class TwitterStream:
         self.query_url = ''
         self.response = None
 
-    def construct_query_url(self, url, query_data):
+    def construct_query_url(self, url, params):
         """
         Function to construct the query_url for the TwitterStream.
         :param url: A string representing the correct Twitter API url.
-        :param query_data: A list of tuples to filter tweets by.
+        :param params: A list of tuples to filter tweets by.
                             Example: query_data = [('language', 'en'), ('locations', '-130,-20,100,50'), ('track', '#')]
         """
-        self.query_url = url + '?' + '&'.join([str(t[0]) + '=' + str(t[1]) for t in query_data])
+        self.query_url = url + '?' + '&'.join([str(t[0]) + '=' + str(t[1]) for t in params])
+        print("query url successfully created:", self.query_url)
 
     def get_tweets(self):
         """
@@ -40,10 +39,10 @@ class TwitterStream:
             print("Response error:", e)
             exit(1)
 
-    def send_tweets_to_spark(self, tcp_connection):
+    def send_tweets_to_spark(self, client_sock):
         """
         A function to send tweets to Spark for processing.
-        :param tcp_connection: A socket connection for the Twitter API.
+        :param client_sock: A socket connection for the Twitter API.
         """
         num_tweets = 0
         for line in self.response.iter_lines():
@@ -56,7 +55,7 @@ class TwitterStream:
                     num_tweets += 1
                     print("successful tweets:", num_tweets)
                     print("Tweet Text: " + tweet_text, '\n', '-' * 20)
-                    tcp_connection[0].send(tweet_text.encode('utf-8'))
+                    client_sock.sendall(tweet_text.encode('utf-8'))
             except error:
                 e = exc_info()
                 print("Error sending:", e)
@@ -65,4 +64,5 @@ class TwitterStream:
                 e = exc_info()
                 print("Connection error:", e)
                 exit(1)
+        client_sock.close()
 
